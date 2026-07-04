@@ -156,7 +156,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
     if (isSelecting) {
       onSlotTap(templateId, slotIndex, selectedImg);
     } else if (slot) {
-      onOpenControls({ templateId, slotIndex });
+      onOpenControls({ templateId, slotIndex, slotDef });
     }
   };
 
@@ -386,15 +386,24 @@ export default function App() {
                 style={{ background:"#6366f1",color:"#fff",border:"none",borderRadius:8,
                   padding:"6px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>✓ 完了</button>
             </div>
-            <div style={{ width:"100%", height:200, background:"#000", borderRadius:10,
-              marginBottom:14, overflow:"hidden", position:"relative" }}>
-              <img src={slot.src} alt="" style={{
-                position:"absolute", inset:0, width:"100%", height:"100%",
-                objectFit:"contain",
-                transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
-                transformOrigin:"center",
-              }} />
-            </div>
+            {(() => {
+              const sd = controlTarget.slotDef;
+              const ratio = sd ? sd.w / sd.h : 1;
+              return (
+                <div style={{ width:"100%", paddingBottom: sd ? `${100/ratio}%` : "100%",
+                  position:"relative", borderRadius:10, marginBottom:14, overflow:"hidden",
+                  background:"#333", maxHeight:220 }}>
+                  <div style={{ position:"absolute", inset:0 }}>
+                    <img src={slot.src} alt="" style={{
+                      position:"absolute", inset:0, width:"100%", height:"100%",
+                      objectFit:"cover",
+                      transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
+                      transformOrigin:"center",
+                    }} />
+                  </div>
+                </div>
+              );
+            })()}
             {[
               ["🔍 ズーム","zoom",100,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
               ["⬅️➡️ 左右","offsetX",-100,100, v=>parseInt(v), v=>v],
