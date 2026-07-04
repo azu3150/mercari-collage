@@ -378,8 +378,8 @@ export default function App() {
             </div>
             {[
               ["🔍 ズーム","zoom",100,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
-              ["⬅️➡️ 左右","offsetX",-50,50, v=>parseInt(v), v=>v],
-              ["⬆️⬇️ 上下","offsetY",-50,50, v=>parseInt(v), v=>v],
+              ["⬅️➡️ 左右","offsetX",-100,100, v=>parseInt(v), v=>v],
+              ["⬆️⬇️ 上下","offsetY",-100,100, v=>parseInt(v), v=>v],
             ].map(([label,key,min,max,parse,disp]) => (
               <div key={key} style={{ marginBottom:14 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
