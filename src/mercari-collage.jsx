@@ -216,16 +216,21 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
       <div style={{ fontWeight:700, fontSize:11, color:"#334155", textAlign:"center", lineHeight:1.3 }}>
         {tmpl.label}
       </div>
-      <div style={{ width:"100%", paddingBottom:"100%", position:"relative" }}>
-        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"hidden" }}>
-          {tmpl.slots.map((sd, i) => (
-            <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
-              templateId={tmpl.id} selectedImg={selectedImg}
-              onSlotTap={onSlotTap} onOpenControls={onOpenControls}
-              isAdjusting={controlTarget?.templateId === tmpl.id && controlTarget?.slotIndex === i} />
-          ))}
-        </div>
-      </div>
+      {(() => {
+        const isAnyAdjusting = controlTarget?.templateId === tmpl.id;
+        return (
+          <div style={{ width:"100%", paddingBottom:"100%", position:"relative", overflow: isAnyAdjusting ? "visible" : "hidden" }}>
+            <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow: isAnyAdjusting ? "visible" : "hidden" }}>
+              {tmpl.slots.map((sd, i) => (
+                <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
+                  templateId={tmpl.id} selectedImg={selectedImg}
+                  onSlotTap={onSlotTap} onOpenControls={onOpenControls}
+                  isAdjusting={controlTarget?.templateId === tmpl.id && controlTarget?.slotIndex === i} />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       <button onClick={() => onSave(tmpl)} disabled={!allFilled}
         style={{ background: allFilled?"#6366f1":"#e2e8f0",
           color: allFilled?"#fff":"#94a3b8",
