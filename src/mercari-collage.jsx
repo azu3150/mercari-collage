@@ -133,10 +133,10 @@ function drawSlot(ctx, sd, slot) {
       const dw = baseW * slot.zoom;
       const dh = baseH * slot.zoom;
 
-      // CSS: scale(zoom) translate(offsetX*(zoom-1)/2 %, ...)
-      // net px shift = offsetX*(zoom-1)/2 / 100 * slotW * zoom
-      const cx = sd.x + sd.w/2 + (slot.offsetX * (slot.zoom-1) / 2 / 100) * sd.w * slot.zoom;
-      const cy = sd.y + sd.h/2 + (slot.offsetY * (slot.zoom-1) / 2 / 100) * sd.h * slot.zoom;
+      // CSS: translate(offsetX%, offsetY%) scale(zoom)
+      // image center = slot center + offsetX/100*slotW, offsetY/100*slotH
+      const cx = sd.x + sd.w/2 + (slot.offsetX/100) * sd.w;
+      const cy = sd.y + sd.h/2 + (slot.offsetY/100) * sd.h;
       const dx = cx - dw/2;
       const dy = cy - dh/2;
 
@@ -181,7 +181,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
             width: "100%", height: "100%",
             objectFit: "cover",
             transformOrigin: "center center",
-            transform: `scale(${slot.zoom}) translate(${slot.offsetX * (slot.zoom - 1) / 2}%, ${slot.offsetY * (slot.zoom - 1) / 2}%)`,
+            transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
             pointerEvents: "none",
           }} />
           {isSelecting ? (
@@ -267,7 +267,7 @@ export default function App() {
   const handleSlotTap = useCallback((templateId, slotIndex, img) => {
     setSlots(prev => {
       const next = { ...prev, [templateId]: [...prev[templateId]] };
-      next[templateId][slotIndex] = { src: img.src, zoom: 1.1, offsetX: 0, offsetY: 0 };
+      next[templateId][slotIndex] = { src: img.src, zoom: 1, offsetX: 0, offsetY: 0 };
       return next;
     });
     setSelectedImg(null);
@@ -377,7 +377,7 @@ export default function App() {
                   padding:"6px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>✓ 完了</button>
             </div>
             {[
-              ["🔍 ズーム","zoom",110,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
+              ["🔍 ズーム","zoom",100,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
               ["⬅️➡️ 左右","offsetX",-50,50, v=>parseInt(v), v=>v],
               ["⬆️⬇️ 上下","offsetY",-50,50, v=>parseInt(v), v=>v],
             ].map(([label,key,min,max,parse,disp]) => (
