@@ -387,19 +387,34 @@ export default function App() {
             {(() => {
               const sd = controlTarget.slotDef;
               const ratio = sd ? sd.w / sd.h : 1;
+              // Outer: shows the "frame" (what will be cropped)
+              // Inner: image moves freely so user can see the full image and choose crop
               return (
-                <div style={{ width:"100%", paddingBottom: sd ? `${100/ratio}%` : "100%",
-                  position:"relative", borderRadius:10, marginBottom:14, overflow:"hidden",
-                  background:"#333", maxHeight:220 }}>
-                  <div style={{ position:"absolute", inset:0 }}>
-                    <img src={slot.src} alt="" style={{
-                      position:"absolute",
-                      width: `${slot.zoom * 100}%`,
-                      height: `${slot.zoom * 100}%`,
-                      objectFit:"cover",
-                      top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
-                      left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
-                    }} />
+                <div style={{ marginBottom:14 }}>
+                  <p style={{ color:"#a5b4fc", fontSize:11, marginBottom:6, textAlign:"center" }}>
+                    枠内が保存される範囲です
+                  </p>
+                  <div style={{ width:"100%", position:"relative",
+                    paddingBottom: `${100/ratio}%`, maxHeight:240 }}>
+                    {/* Full image preview — no clipping */}
+                    <div style={{ position:"absolute", inset:0, overflow:"visible",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <div style={{ position:"relative", width:"100%", height:"100%" }}>
+                        <img src={slot.src} alt="" style={{
+                          position:"absolute",
+                          width: `${slot.zoom * 100}%`,
+                          height: `${slot.zoom * 100}%`,
+                          objectFit:"cover",
+                          top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
+                          left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
+                        }} />
+                        {/* Crop frame overlay */}
+                        <div style={{ position:"absolute", inset:0,
+                          boxShadow:"0 0 0 999px rgba(0,0,0,0.55)",
+                          border:"2px solid #6366f1",
+                          borderRadius:4, pointerEvents:"none", zIndex:2 }} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               );
