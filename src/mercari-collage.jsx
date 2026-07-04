@@ -149,7 +149,7 @@ function drawSlot(ctx, sd, slot) {
   });
 }
 
-function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap, onOpenControls }) {
+function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap, onOpenControls, isAdjusting }) {
   const isSelecting = !!selectedImg;
 
   const handleTap = () => {
@@ -169,7 +169,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         width: `${(slotDef.w/S)*100}%`, height: `${(slotDef.h/S)*100}%`,
         background: isSelecting ? "#dbeafe" : slot ? "transparent" : "#f1f5f9",
         border: isSelecting ? "2.5px dashed #3b82f6" : slot ? "2px solid transparent" : "2px dashed #cbd5e1",
-        borderRadius: 3, overflow: "hidden", cursor: "pointer",
+        borderRadius: 3, overflow: isAdjusting ? "visible" : "hidden", cursor: "pointer",
         boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
@@ -220,7 +220,8 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
           {tmpl.slots.map((sd, i) => (
             <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
               templateId={tmpl.id} selectedImg={selectedImg}
-              onSlotTap={onSlotTap} onOpenControls={onOpenControls} />
+              onSlotTap={onSlotTap} onOpenControls={onOpenControls}
+              isAdjusting={controlTarget?.templateId === tmpl.id && controlTarget?.slotIndex === i} />
           ))}
         </div>
       </div>
@@ -421,7 +422,7 @@ export default function App() {
           {TEMPLATES.map(tmpl => (
             <TemplateCard key={tmpl.id} tmpl={tmpl} slotValues={slots[tmpl.id]}
               selectedImg={selectedImg} onSlotTap={handleSlotTap}
-              onOpenControls={setControlTarget}
+              onOpenControls={setControlTarget} controlTarget={controlTarget}
               onAdjust={handleAdjust} onRemove={handleRemove} onClear={handleClear}
               onSave={saving ? ()=>{} : handleSave} />
           ))}
