@@ -123,22 +123,30 @@ function drawSlot(ctx, sd, slot) {
       const slotRatio = sd.w / sd.h;
       const imgRatio  = iw / ih;
 
-      // cover: fit the shorter dimension to slot, then apply zoom
-      let baseW, baseH;
-      if (imgRatio > slotRatio) {
-        baseH = sd.h; baseW = baseH * imgRatio;
+      // Match CSS: wide slots pan vertically (img width=100% of slot, height=300%)
+      //             tall slots pan horizontally (img height=100% of slot, width=300%)
+      const isWide = sd.w >= sd.h;
+      let boxW, boxH, boxX, boxY;
+      if (isWide) {
+        boxW = sd.w * slot.zoom;
+        boxH = sd.h * 3 * slot.zoom;
+        boxX = sd.x + sd.w * (1 - slot.zoom) * 50 / 100;
+        boxY = sd.y + sd.h * (-3*slot.zoom/2 + 0.5*slot.zoom + slot.offsetY/100);
       } else {
-        baseW = sd.w; baseH = baseW / imgRatio;
+        boxW = sd.w * 3 * slot.zoom;
+        boxH = sd.h * slot.zoom;
+        boxX = sd.x + sd.w * (-3*slot.zoom/2 + 0.5*slot.zoom + slot.offsetX/100);
+        boxY = sd.y + sd.h * (1 - slot.zoom) * 50 / 100;
       }
-      const dw = baseW * slot.zoom;
-      const dh = baseH * slot.zoom;
-
-      // CSS: translate(offsetX%, offsetY%) scale(zoom)
-      // image center = slot center + offsetX/100*slotW, offsetY/100*slotH
-      const cx = sd.x + sd.w/2 + (slot.offsetX/100) * sd.w;
-      const cy = sd.y + sd.h/2 + (slot.offsetY/100) * sd.h;
-      const dx = cx - dw/2;
-      const dy = cy - dh/2;
+      const boxRatio = boxW / boxH;
+      let dw, dh;
+      if (imgRatio > boxRatio) {
+        dh = boxH; dw = dh * imgRatio;
+      } else {
+        dw = boxW; dh = dw / imgRatio;
+      }
+      const dx = boxX + (boxW - dw) / 2;
+      const dy = boxY + (boxH - dh) / 2;
 
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
@@ -156,7 +164,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
     if (isSelecting) {
       onSlotTap(templateId, slotIndex, selectedImg);
     } else if (slot) {
-      onOpenControls({ templateId, slotIndex });
+      onOpenControls({ templateId, slotIndex, slotDef });
     }
   };
 
@@ -169,21 +177,31 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         width: `${(slotDef.w/S)*100}%`, height: `${(slotDef.h/S)*100}%`,
         background: isSelecting ? "#dbeafe" : slot ? "transparent" : "#f1f5f9",
         border: isSelecting ? "2.5px dashed #3b82f6" : slot ? "2px solid transparent" : "2px dashed #cbd5e1",
-        borderRadius: 3, overflow: isAdjusting ? "visible" : "hidden", cursor: "pointer",
+        borderRadius: 3, overflow: "hidden", cursor: "pointer",
         boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
     >
       {slot ? (
         <>
-          <img src={slot.src} alt="" style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
-            objectFit: "cover",
-            transformOrigin: "center center",
-            transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
-            pointerEvents: "none",
-          }} />
+          {(() => {
+            const isWide = slotDef.w >= slotDef.h; // horizontal slot
+            const extraH = slot.zoom * 300; // 300% tall for vertical panning
+            const extraW = slot.zoom * 300; // 300% wide for horizontal panning
+            const imgW = isWide ? `${slot.zoom * 100}%` : `${extraW}%`;
+            const imgH = isWide ? `${extraH}%` : `${slot.zoom * 100}%`;
+            const imgTop = isWide ? `${-extraH/2 + 50*slot.zoom + slot.offsetY}%` : `${(1-slot.zoom)*50}%`;
+            const imgLeft = isWide ? `${(1-slot.zoom)*50}%` : `${-extraW/2 + 50*slot.zoom + slot.offsetX}%`;
+            return (
+              <img src={slot.src} alt="" style={{
+                position: "absolute",
+                width: imgW, height: imgH,
+                objectFit: "cover",
+                top: imgTop, left: imgLeft,
+                pointerEvents: "none",
+              }} />
+            );
+          })()}
           {isSelecting ? (
             <div style={{ position:"absolute",inset:0, background:"rgba(59,130,246,0.4)",
               display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -216,21 +234,16 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
       <div style={{ fontWeight:700, fontSize:11, color:"#334155", textAlign:"center", lineHeight:1.3 }}>
         {tmpl.label}
       </div>
-      {(() => {
-        const isAnyAdjusting = controlTarget?.templateId === tmpl.id;
-        return (
-          <div style={{ width:"100%", paddingBottom:"100%", position:"relative", overflow: isAnyAdjusting ? "visible" : "hidden" }}>
-            <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow: isAnyAdjusting ? "visible" : "hidden" }}>
-              {tmpl.slots.map((sd, i) => (
-                <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
-                  templateId={tmpl.id} selectedImg={selectedImg}
-                  onSlotTap={onSlotTap} onOpenControls={onOpenControls}
-                  isAdjusting={controlTarget?.templateId === tmpl.id && controlTarget?.slotIndex === i} />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+      <div style={{ width:"100%", paddingBottom:"100%", position:"relative" }}>
+        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"hidden" }}>
+          {tmpl.slots.map((sd, i) => (
+            <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
+              templateId={tmpl.id} selectedImg={selectedImg}
+              onSlotTap={onSlotTap} onOpenControls={onOpenControls}
+              isAdjusting={false} />
+          ))}
+        </div>
+      </div>
       <button onClick={() => onSave(tmpl)} disabled={!allFilled}
         style={{ background: allFilled?"#6366f1":"#e2e8f0",
           color: allFilled?"#fff":"#94a3b8",
@@ -385,12 +398,57 @@ export default function App() {
             background:"#1e1b4b", borderRadius:"18px 18px 0 0",
             padding:"16px 20px 32px", boxShadow:"0 -4px 24px rgba(0,0,0,0.4)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <span style={{ color:"#fff", fontWeight:800, fontSize:15 }}>🎛 画像を調整</span>
               <button onClick={() => setControlTarget(null)}
                 style={{ background:"#6366f1",color:"#fff",border:"none",borderRadius:8,
                   padding:"6px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>✓ 完了</button>
             </div>
+            {(() => {
+              const sd = controlTarget.slotDef;
+              const ratio = sd ? sd.w / sd.h : 1;
+              // Outer: shows the "frame" (what will be cropped)
+              // Inner: image moves freely so user can see the full image and choose crop
+              return (
+                <div style={{ marginBottom:14 }}>
+                  <p style={{ color:"#a5b4fc", fontSize:11, marginBottom:6, textAlign:"center" }}>
+                    枠内が保存される範囲です
+                  </p>
+                  <div style={{ width:"100%", position:"relative",
+                    paddingBottom: `${100/ratio}%`, maxHeight:240 }}>
+                    {/* Full image preview — no clipping */}
+                    <div style={{ position:"absolute", inset:0, overflow:"visible",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <div style={{ position:"relative", width:"100%", height:"100%" }}>
+                        {(() => {
+                          const sd2 = controlTarget.slotDef;
+                          const isWide2 = sd2 ? sd2.w >= sd2.h : true;
+                          const extraH2 = slot.zoom * 300;
+                          const extraW2 = slot.zoom * 300;
+                          const imgW2 = isWide2 ? `${slot.zoom * 100}%` : `${extraW2}%`;
+                          const imgH2 = isWide2 ? `${extraH2}%` : `${slot.zoom * 100}%`;
+                          const imgTop2 = isWide2 ? `${-extraH2/2 + 50*slot.zoom + slot.offsetY}%` : `${(1-slot.zoom)*50}%`;
+                          const imgLeft2 = isWide2 ? `${(1-slot.zoom)*50}%` : `${-extraW2/2 + 50*slot.zoom + slot.offsetX}%`;
+                          return (
+                            <img src={slot.src} alt="" style={{
+                              position:"absolute",
+                              width: imgW2, height: imgH2,
+                              objectFit:"cover",
+                              top: imgTop2, left: imgLeft2,
+                            }} />
+                          );
+                        })()}
+                        {/* Crop frame overlay */}
+                        <div style={{ position:"absolute", inset:0,
+                          boxShadow:"0 0 0 999px rgba(0,0,0,0.55)",
+                          border:"2px solid #6366f1",
+                          borderRadius:4, pointerEvents:"none", zIndex:2 }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {[
               ["🔍 ズーム","zoom",100,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
               ["⬅️➡️ 左右","offsetX",-100,100, v=>parseInt(v), v=>v],
