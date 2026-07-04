@@ -206,8 +206,9 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
   );
 }
 
-function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls, onAdjust, onRemove, onSave }) {
+function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls, controlTarget, onAdjust, onRemove, onSave, onClear }) {
   const allFilled = slotValues.every(s => s !== null);
+  const anyFilled = slotValues.some(s => s !== null);
   return (
     <div style={{ background:"#fff", borderRadius:12, boxShadow:"0 2px 10px #0001",
       padding:10, display:"flex", flexDirection:"column", gap:8,
@@ -231,8 +232,16 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
           border:"none", borderRadius:7, padding:"7px 0",
           fontWeight:700, fontSize:13,
           cursor: allFilled?"pointer":"not-allowed" }}>
-        📤 保存
+        📤 保存してクリア
       </button>
+      {anyFilled && (
+        <button onClick={() => onClear(tmpl.id)}
+          style={{ background:"#fee2e2", color:"#ef4444",
+            border:"none", borderRadius:7, padding:"5px 0",
+            fontWeight:700, fontSize:12, cursor:"pointer" }}>
+          🗑 一括削除
+        </button>
+      )}
     </div>
   );
 }
