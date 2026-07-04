@@ -133,12 +133,9 @@ function drawSlot(ctx, sd, slot) {
       const dw = baseW * slot.zoom;
       const dh = baseH * slot.zoom;
 
-      // CSS: translate(offsetX%, offsetY%) scale(zoom)
-      // image center = slot center + offsetX/100*slotW, offsetY/100*slotH
-      const cx = sd.x + sd.w/2 + (slot.offsetX/100) * sd.w;
-      const cy = sd.y + sd.h/2 + (slot.offsetY/100) * sd.h;
-      const dx = cx - dw/2;
-      const dy = cy - dh/2;
+      // CSS: left=(1-zoom)*50+offsetX % of slot, top=(1-zoom)*50+offsetY % of slot
+      const dx = sd.x + sd.w * ((1 - slot.zoom) * 50 + slot.offsetX) / 100;
+      const dy = sd.y + sd.h * ((1 - slot.zoom) * 50 + slot.offsetY) / 100;
 
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
@@ -177,11 +174,12 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
       {slot ? (
         <>
           <img src={slot.src} alt="" style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
+            position: "absolute",
+            width: `${slot.zoom * 100}%`,
+            height: `${slot.zoom * 100}%`,
             objectFit: "cover",
-            transformOrigin: "center center",
-            transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
+            top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
+            left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
             pointerEvents: "none",
           }} />
           {isSelecting ? (
@@ -395,10 +393,12 @@ export default function App() {
                   background:"#333", maxHeight:220 }}>
                   <div style={{ position:"absolute", inset:0 }}>
                     <img src={slot.src} alt="" style={{
-                      position:"absolute", inset:0, width:"100%", height:"100%",
+                      position:"absolute",
+                      width: `${slot.zoom * 100}%`,
+                      height: `${slot.zoom * 100}%`,
                       objectFit:"cover",
-                      transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
-                      transformOrigin:"center",
+                      top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
+                      left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
                     }} />
                   </div>
                 </div>
