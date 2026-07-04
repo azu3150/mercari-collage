@@ -133,9 +133,10 @@ function drawSlot(ctx, sd, slot) {
       const dw = baseW * slot.zoom;
       const dh = baseH * slot.zoom;
 
-      // shift = offsetX * (zoom-1)/100 * slotW — matches CSS translate(offsetX*(zoom-1)/zoom %) * zoom
-      const cx = sd.x + sd.w/2 + (slot.offsetX * (slot.zoom-1) / 100) * sd.w;
-      const cy = sd.y + sd.h/2 + (slot.offsetY * (slot.zoom-1) / 100) * sd.h;
+      // CSS: scale(zoom) translate(offsetX%, offsetY%) — translate % is of slot size, applied before scale reversal
+      // net shift in slot px = offsetX/100 * sd.w * zoom
+      const cx = sd.x + sd.w/2 + (slot.offsetX/100) * sd.w * slot.zoom;
+      const cy = sd.y + sd.h/2 + (slot.offsetY/100) * sd.h * slot.zoom;
       const dx = cx - dw/2;
       const dy = cy - dh/2;
 
@@ -180,7 +181,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
             width: "100%", height: "100%",
             objectFit: "cover",
             transformOrigin: "center center",
-            transform: `scale(${slot.zoom}) translate(${slot.offsetX * (slot.zoom-1) / slot.zoom}%, ${slot.offsetY * (slot.zoom-1) / slot.zoom}%)`,
+            transform: `scale(${slot.zoom}) translate(${slot.offsetX}%, ${slot.offsetY}%)`,
             pointerEvents: "none",
           }} />
           {isSelecting ? (
