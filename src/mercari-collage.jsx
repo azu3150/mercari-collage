@@ -123,19 +123,21 @@ function drawSlot(ctx, sd, slot) {
       const slotRatio = sd.w / sd.h;
       const imgRatio  = iw / ih;
 
-      // cover: fit the shorter dimension to slot, then apply zoom
-      let baseW, baseH;
-      if (imgRatio > slotRatio) {
-        baseH = sd.h; baseW = baseH * imgRatio;
+      // CSS: img is 300*zoom% of slot size, objectFit:cover inside that box
+      const boxW = 3 * slot.zoom * sd.w;
+      const boxH = 3 * slot.zoom * sd.h;
+      const boxX = sd.x + sd.w * (-100 * slot.zoom + slot.offsetX) / 100;
+      const boxY = sd.y + sd.h * (-100 * slot.zoom + slot.offsetY) / 100;
+      // objectFit:cover inside boxW x boxH
+      const boxRatio = boxW / boxH;
+      let dw, dh;
+      if (imgRatio > boxRatio) {
+        dh = boxH; dw = dh * imgRatio;
       } else {
-        baseW = sd.w; baseH = baseW / imgRatio;
+        dw = boxW; dh = dw / imgRatio;
       }
-      const dw = baseW * slot.zoom;
-      const dh = baseH * slot.zoom;
-
-      // CSS: left=(1-zoom)*50+offsetX % of slot, top=(1-zoom)*50+offsetY % of slot
-      const dx = sd.x + sd.w * ((1 - slot.zoom) * 50 + slot.offsetX) / 100;
-      const dy = sd.y + sd.h * ((1 - slot.zoom) * 50 + slot.offsetY) / 100;
+      const dx = boxX + (boxW - dw) / 2;
+      const dy = boxY + (boxH - dh) / 2;
 
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
@@ -175,11 +177,11 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         <>
           <img src={slot.src} alt="" style={{
             position: "absolute",
-            width: `${slot.zoom * 100}%`,
-            height: `${slot.zoom * 100}%`,
+            width: `${slot.zoom * 300}%`,
+            height: `${slot.zoom * 300}%`,
             objectFit: "cover",
-            top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
-            left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
+            top: `${-100 * slot.zoom + slot.offsetY}%`,
+            left: `${-100 * slot.zoom + slot.offsetX}%`,
             pointerEvents: "none",
           }} />
           {isSelecting ? (
@@ -402,11 +404,11 @@ export default function App() {
                       <div style={{ position:"relative", width:"100%", height:"100%" }}>
                         <img src={slot.src} alt="" style={{
                           position:"absolute",
-                          width: `${slot.zoom * 100}%`,
-                          height: `${slot.zoom * 100}%`,
+                          width: `${slot.zoom * 300}%`,
+                          height: `${slot.zoom * 300}%`,
                           objectFit:"cover",
-                          top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
-                          left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
+                          top: `${-100 * slot.zoom + slot.offsetY}%`,
+                          left: `${-100 * slot.zoom + slot.offsetX}%`,
                         }} />
                         {/* Crop frame overlay */}
                         <div style={{ position:"absolute", inset:0,
