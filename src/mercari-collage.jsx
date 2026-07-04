@@ -169,7 +169,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         width: `${(slotDef.w/S)*100}%`, height: `${(slotDef.h/S)*100}%`,
         background: isSelecting ? "#dbeafe" : slot ? "transparent" : "#f1f5f9",
         border: isSelecting ? "2.5px dashed #3b82f6" : slot ? "2px solid transparent" : "2px dashed #cbd5e1",
-        borderRadius: 3, overflow: isAdjusting ? "visible" : "hidden", cursor: "pointer",
+        borderRadius: 3, overflow: "hidden", cursor: "pointer",
         boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
@@ -216,21 +216,16 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
       <div style={{ fontWeight:700, fontSize:11, color:"#334155", textAlign:"center", lineHeight:1.3 }}>
         {tmpl.label}
       </div>
-      {(() => {
-        const isAnyAdjusting = controlTarget?.templateId === tmpl.id;
-        return (
-          <div style={{ width:"100%", paddingBottom:"100%", position:"relative", overflow: isAnyAdjusting ? "visible" : "hidden" }}>
-            <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow: isAnyAdjusting ? "visible" : "hidden" }}>
-              {tmpl.slots.map((sd, i) => (
-                <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
-                  templateId={tmpl.id} selectedImg={selectedImg}
-                  onSlotTap={onSlotTap} onOpenControls={onOpenControls}
-                  isAdjusting={controlTarget?.templateId === tmpl.id && controlTarget?.slotIndex === i} />
-              ))}
-            </div>
-          </div>
-        );
-      })()}
+      <div style={{ width:"100%", paddingBottom:"100%", position:"relative" }}>
+        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"hidden" }}>
+          {tmpl.slots.map((sd, i) => (
+            <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
+              templateId={tmpl.id} selectedImg={selectedImg}
+              onSlotTap={onSlotTap} onOpenControls={onOpenControls}
+              isAdjusting={false} />
+          ))}
+        </div>
+      </div>
       <button onClick={() => onSave(tmpl)} disabled={!allFilled}
         style={{ background: allFilled?"#6366f1":"#e2e8f0",
           color: allFilled?"#fff":"#94a3b8",
@@ -385,11 +380,20 @@ export default function App() {
             background:"#1e1b4b", borderRadius:"18px 18px 0 0",
             padding:"16px 20px 32px", boxShadow:"0 -4px 24px rgba(0,0,0,0.4)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <span style={{ color:"#fff", fontWeight:800, fontSize:15 }}>🎛 画像を調整</span>
               <button onClick={() => setControlTarget(null)}
                 style={{ background:"#6366f1",color:"#fff",border:"none",borderRadius:8,
                   padding:"6px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>✓ 完了</button>
+            </div>
+            <div style={{ width:"100%", height:200, background:"#000", borderRadius:10,
+              marginBottom:14, overflow:"hidden", position:"relative" }}>
+              <img src={slot.src} alt="" style={{
+                position:"absolute", inset:0, width:"100%", height:"100%",
+                objectFit:"contain",
+                transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
+                transformOrigin:"center",
+              }} />
             </div>
             {[
               ["🔍 ズーム","zoom",100,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
