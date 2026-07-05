@@ -123,21 +123,20 @@ function drawSlot(ctx, sd, slot) {
       const slotRatio = sd.w / sd.h;
       const imgRatio  = iw / ih;
 
-      // CSS: width=zoom*100%, height=zoom*100%, top=(1-zoom)*50+offsetY %, left=(1-zoom)*50+offsetX %
-      // Image element box:
-      const boxW = sd.w * slot.zoom;
-      const boxH = sd.h * slot.zoom;
-      const boxX = sd.x + sd.w * ((1 - slot.zoom) * 50 + slot.offsetX) / 100;
-      const boxY = sd.y + sd.h * ((1 - slot.zoom) * 50 + slot.offsetY) / 100;
-      const boxRatio = boxW / boxH;
+      // CSS: top:50%, left:50%, transform:translate(calc(-50%+offsetX%), calc(-50%+offsetY%))
+      // % in transform = % of image size
+      const isWide = sd.w >= sd.h;
       let dw, dh;
-      if (imgRatio > boxRatio) {
-        dh = boxH; dw = dh * imgRatio;
+      if (isWide) {
+        dw = sd.w * slot.zoom;
+        dh = dw / imgRatio;
       } else {
-        dw = boxW; dh = dw / imgRatio;
+        dh = sd.h * slot.zoom;
+        dw = dh * imgRatio;
       }
-      const dx = boxX + (boxW - dw) / 2;
-      const dy = boxY + (boxH - dh) / 2;
+      // center + offset (% of image size)
+      const dx = sd.x + sd.w/2 - dw/2 + (slot.offsetX/100) * dw;
+      const dy = sd.y + sd.h/2 - dh/2 + (slot.offsetY/100) * dh;
 
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
@@ -168,22 +167,28 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         width: `${(slotDef.w/S)*100}%`, height: `${(slotDef.h/S)*100}%`,
         background: isSelecting ? "#dbeafe" : slot ? "transparent" : "#f1f5f9",
         border: isSelecting ? "2.5px dashed #3b82f6" : slot ? "2px solid transparent" : "2px dashed #cbd5e1",
-        borderRadius: 3, overflow: "visible", cursor: "pointer",
+        borderRadius: 3, overflow: "hidden", cursor: "pointer",
         boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
     >
       {slot ? (
         <>
-          <img src={slot.src} alt="" style={{
-            position: "absolute",
-            width: `${slot.zoom * 100}%`,
-            height: `${slot.zoom * 100}%`,
-            objectFit: "cover",
-            top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
-            left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
-            pointerEvents: "none",
-          }} />
+          {(() => {
+            const isWide = slotDef.w >= slotDef.h;
+            return (
+              <img src={slot.src} alt="" style={{
+                position: "absolute",
+                width: isWide ? `${slot.zoom * 100}%` : "auto",
+                height: isWide ? "auto" : `${slot.zoom * 100}%`,
+                maxWidth: "none", maxHeight: "none",
+                top: "50%",
+                left: "50%",
+                transform: `translate(calc(-50% + ${slot.offsetX}%), calc(-50% + ${slot.offsetY}%))`,
+                pointerEvents: "none",
+              }} />
+            );
+          })()}
           {isSelecting ? (
             <div style={{ position:"absolute",inset:0, background:"rgba(59,130,246,0.4)",
               display:"flex",alignItems:"center",justifyContent:"center" }}>
@@ -216,8 +221,8 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
       <div style={{ fontWeight:700, fontSize:11, color:"#334155", textAlign:"center", lineHeight:1.3 }}>
         {tmpl.label}
       </div>
-      <div style={{ width:"100%", paddingBottom:"100%", position:"relative", overflow:"visible" }}>
-        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"visible" }}>
+      <div style={{ width:"100%", paddingBottom:"100%", position:"relative" }}>
+        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"hidden" }}>
           {tmpl.slots.map((sd, i) => (
             <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
               templateId={tmpl.id} selectedImg={selectedImg}
