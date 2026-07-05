@@ -262,6 +262,7 @@ export default function App() {
   const [saving, setSaving] = useState(null);
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
   const [controlTarget, setControlTarget] = useState(null); // {templateId, slotIndex}
+  const [currentTmplIndex, setCurrentTmplIndex] = useState(0);
   const fileInputRef = useRef();
   const hiddenCanvas = useRef();
 
@@ -469,19 +470,41 @@ export default function App() {
         </div>
       )}
 
-      {/* Templates */}
+      {/* Templates — swipeable single card */}
       <div style={{ padding:"14px 14px 6px" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight:700, fontSize:13, color:"#475569", marginBottom:10 }}>🖼 テンプレート</div>
-        <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8 }}>
-          {TEMPLATES.map(tmpl => (
-            <TemplateCard key={tmpl.id} tmpl={tmpl} slotValues={slots[tmpl.id]}
-              selectedImg={selectedImg} onSlotTap={handleSlotTap}
-              onOpenControls={setControlTarget} controlTarget={controlTarget}
-              onAdjust={handleAdjust} onRemove={handleRemove} onClear={handleClear}
-              onSave={saving ? ()=>{} : handleSave} />
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+          <button onClick={() => setCurrentTmplIndex(i => Math.max(0, i-1))}
+            disabled={currentTmplIndex === 0}
+            style={{ background: currentTmplIndex===0?"#e2e8f0":"#6366f1", color: currentTmplIndex===0?"#94a3b8":"#fff",
+              border:"none", borderRadius:8, padding:"6px 14px", fontSize:18, cursor: currentTmplIndex===0?"default":"pointer" }}>
+            ‹
+          </button>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ fontWeight:700, fontSize:15, color:"#334155" }}>{TEMPLATES[currentTmplIndex].label}</div>
+            <div style={{ fontSize:11, color:"#94a3b8" }}>{currentTmplIndex+1} / {TEMPLATES.length}</div>
+          </div>
+          <button onClick={() => setCurrentTmplIndex(i => Math.min(TEMPLATES.length-1, i+1))}
+            disabled={currentTmplIndex === TEMPLATES.length-1}
+            style={{ background: currentTmplIndex===TEMPLATES.length-1?"#e2e8f0":"#6366f1", color: currentTmplIndex===TEMPLATES.length-1?"#94a3b8":"#fff",
+              border:"none", borderRadius:8, padding:"6px 14px", fontSize:18, cursor: currentTmplIndex===TEMPLATES.length-1?"default":"pointer" }}>
+            ›
+          </button>
+        </div>
+        {/* Dots indicator */}
+        <div style={{ display:"flex", justifyContent:"center", gap:5, marginBottom:10 }}>
+          {TEMPLATES.map((_, i) => (
+            <div key={i} onClick={() => setCurrentTmplIndex(i)}
+              style={{ width: i===currentTmplIndex?16:7, height:7,
+                borderRadius:4, cursor:"pointer", transition:"width 0.2s",
+                background: i===currentTmplIndex?"#6366f1":"#cbd5e1" }} />
           ))}
         </div>
-        {saving && <div style={{ textAlign:"center",color:"#6366f1",fontWeight:700,marginTop:4 }}>保存中…</div>}
+        <TemplateCard tmpl={TEMPLATES[currentTmplIndex]} slotValues={slots[TEMPLATES[currentTmplIndex].id]}
+          selectedImg={selectedImg} onSlotTap={handleSlotTap}
+          onOpenControls={setControlTarget} controlTarget={controlTarget}
+          onAdjust={handleAdjust} onRemove={handleRemove} onClear={handleClear}
+          onSave={saving ? ()=>{} : handleSave} />
+        {saving && <div style={{ textAlign:"center",color:"#6366f1",fontWeight:700,marginTop:8 }}>保存中…</div>}
       </div>
 
       {/* Tray */}
