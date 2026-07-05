@@ -96,18 +96,18 @@ function makeL1R2() {
 }
 
 const TEMPLATES = [
-  { id: "v2",   label: "縦2分割",        slots: makeGrid(2,1) },
-  { id: "h2",   label: "横2分割（1:1）", slots: makeGrid(1,2) },
-  { id: "h21",  label: "横2分割（2:1）", slots: makeH21() },
-  { id: "h3",   label: "横3分割",        slots: makeGrid(1,3) },
-  { id: "v3",   label: "縦3分割",        slots: makeGrid(3,1) },
-  { id: "t3",   label: "上横長＋下2",    slots: makeTShape() },
-  { id: "g4",   label: "4分割",          slots: makeGrid(2,2) },
-  { id: "g6",   label: "6分割",          slots: makeGrid(3,2) },
-  { id: "invt3", label: "上2＋下横長",    slots: makeInvTShape() },
-  { id: "l2r3",  label: "左2＋右3",       slots: makeL2R3() },
-  { id: "t2b3",  label: "上2＋下3",       slots: makeT2B3() },
-  { id: "l1r2",  label: "左縦長＋右2",    slots: makeL1R2() },
+  { id: "v2",    label: "縦2分割",       slots: makeGrid(2,1) },
+  { id: "h2",    label: "横2分割（1:1）", slots: makeGrid(1,2) },
+  { id: "h21",   label: "横2分割（2:1）", slots: makeH21() },
+  { id: "t3",    label: "上横長＋下2",   slots: makeTShape() },
+  { id: "g4",    label: "4分割",         slots: makeGrid(2,2) },
+  { id: "l1r2",  label: "左縦長＋右2",  slots: makeL1R2() },
+  { id: "invt3", label: "上2＋下横長",  slots: makeInvTShape() },
+  { id: "l2r3",  label: "左2＋右3",     slots: makeL2R3() },
+  { id: "t2b3",  label: "上2＋下3",     slots: makeT2B3() },
+  { id: "h3",    label: "横3分割",       slots: makeGrid(1,3) },
+  { id: "v3",    label: "縦3分割",       slots: makeGrid(3,1) },
+  { id: "g6",    label: "6分割",         slots: makeGrid(3,2) },
 ];
 
 // Draw image onto canvas slot — mirrors CSS objectFit:cover + scale + objectPosition
