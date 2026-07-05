@@ -472,7 +472,7 @@ export default function App() {
       {/* Templates */}
       <div style={{ padding:"14px 14px 6px" }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight:700, fontSize:13, color:"#475569", marginBottom:10 }}>🖼 テンプレート</div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+        <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8 }}>
           {TEMPLATES.map(tmpl => (
             <TemplateCard key={tmpl.id} tmpl={tmpl} slotValues={slots[tmpl.id]}
               selectedImg={selectedImg} onSlotTap={handleSlotTap}
