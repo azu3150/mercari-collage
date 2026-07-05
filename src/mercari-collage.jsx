@@ -168,7 +168,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         width: `${(slotDef.w/S)*100}%`, height: `${(slotDef.h/S)*100}%`,
         background: isSelecting ? "#dbeafe" : slot ? "transparent" : "#f1f5f9",
         border: isSelecting ? "2.5px dashed #3b82f6" : slot ? "2px solid transparent" : "2px dashed #cbd5e1",
-        borderRadius: 3, overflow: "hidden", cursor: "pointer",
+        borderRadius: 3, overflow: "visible", cursor: "pointer",
         boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
@@ -212,12 +212,12 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
   return (
     <div style={{ background:"#fff", borderRadius:12, boxShadow:"0 2px 10px #0001",
       padding:10, display:"flex", flexDirection:"column", gap:8,
-      minWidth:150, maxWidth:175, flex:"0 0 auto" }}>
+      width:"100%", overflow:"visible" }}>
       <div style={{ fontWeight:700, fontSize:11, color:"#334155", textAlign:"center", lineHeight:1.3 }}>
         {tmpl.label}
       </div>
-      <div style={{ width:"100%", paddingBottom:"100%", position:"relative" }}>
-        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"hidden" }}>
+      <div style={{ width:"100%", paddingBottom:"100%", position:"relative", overflow:"visible" }}>
+        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"visible" }}>
           {tmpl.slots.map((sd, i) => (
             <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
               templateId={tmpl.id} selectedImg={selectedImg}
@@ -389,55 +389,39 @@ export default function App() {
             {(() => {
               const sd = controlTarget.slotDef;
               const slotRatio = sd ? sd.w / sd.h : 1;
-              // Large preview: show full image, overlay shows crop frame
-              // Preview height fixed at 260px, width = 100%
+              // Preview: image shown freely (no clipping), crop frame overlaid as border
+              // Frame fills the preview area at slot aspect ratio
+              const frameW = slotRatio >= 1 ? 100 : slotRatio * 100;
+              const frameH = slotRatio >= 1 ? (100 / slotRatio) : 100;
+              const frameLeft = (100 - frameW) / 2;
+              const frameTop = (100 - frameH) / 2;
               return (
                 <div style={{ marginBottom:14 }}>
                   <p style={{ color:"#a5b4fc", fontSize:11, marginBottom:6, textAlign:"center" }}>
-                    紫の枠内が保存される範囲です
+                    紫の枠内が保存される範囲 — スライダーで位置を合わせてください
                   </p>
-                  <div style={{ width:"100%", height:260, background:"#000",
-                    borderRadius:10, position:"relative", overflow:"hidden" }}>
-                    {/* Full image shown with objectFit:contain so nothing is clipped */}
-                    <img src={slot.src} alt=""
-                      style={{ position:"absolute", inset:0, width:"100%", height:"100%",
-                        objectFit:"contain", opacity:0.35 }} />
-                    {/* Crop frame: shows what portion will be saved */}
-                    {(() => {
-                      // frame dimensions relative to preview (260px tall, 100% wide)
-                      // frame aspect = slotRatio
-                      // if slotRatio >= 1: frame fills full width
-                      //   frame height = previewW / slotRatio
-                      // else: frame fills full height
-                      //   frame width = 260 * slotRatio
-                      const previewH = 260;
-                      // We'll use percentage-based frame
-                      // frame W% and H% of the 260px box
-                      const frameW = slotRatio >= 1 ? 100 : slotRatio * 100;
-                      const frameH = slotRatio >= 1 ? (100 / slotRatio) : 100;
-                      const frameLeft = (100 - frameW) / 2;
-                      const frameTop = (100 - frameH) / 2;
-                      return (
-                        <div style={{
-                          position:"absolute",
-                          left: `${frameLeft}%`, top: `${frameTop}%`,
-                          width: `${frameW}%`, height: `${frameH}%`,
-                          overflow:"hidden",
-                          border:"2px solid #818cf8",
-                          borderRadius:4,
-                        }}>
-                          {/* Image inside crop frame with adjustments applied */}
-                          <img src={slot.src} alt="" style={{
-                            position:"absolute",
-                            width: `${slot.zoom * 100}%`,
-                            height: `${slot.zoom * 100}%`,
-                            objectFit:"cover",
-                            top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
-                            left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
-                          }} />
-                        </div>
-                      );
-                    })()}
+                  {/* Outer: fixed height container, NO overflow hidden */}
+                  <div style={{ width:"100%", height:280, background:"#111",
+                    borderRadius:10, position:"relative", overflow:"visible" }}>
+                    {/* Image: full size, freely movable, no clipping */}
+                    <img src={slot.src} alt="" style={{
+                      position:"absolute",
+                      width: `${slot.zoom * frameW}%`,
+                      height: `${slot.zoom * frameH}%`,
+                      objectFit:"cover",
+                      top: `${frameTop + (1 - slot.zoom) * frameH / 2 + slot.offsetY * frameH / 100}%`,
+                      left: `${frameLeft + (1 - slot.zoom) * frameW / 2 + slot.offsetX * frameW / 100}%`,
+                      maxWidth:"none",
+                    }} />
+                    {/* Crop frame overlay — just the border, no clipping */}
+                    <div style={{
+                      position:"absolute",
+                      left:`${frameLeft}%`, top:`${frameTop}%`,
+                      width:`${frameW}%`, height:`${frameH}%`,
+                      border:"3px solid #818cf8",
+                      borderRadius:4, pointerEvents:"none",
+                      boxShadow:"0 0 0 9999px rgba(0,0,0,0.55)",
+                    }} />
                   </div>
                 </div>
               );
@@ -483,7 +467,7 @@ export default function App() {
       {/* Templates */}
       <div style={{ padding:"14px 14px 6px" }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight:700, fontSize:13, color:"#475569", marginBottom:10 }}>🖼 テンプレート</div>
-        <div style={{ display:"flex", gap:10, overflowX:"auto", paddingBottom:8 }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
           {TEMPLATES.map(tmpl => (
             <TemplateCard key={tmpl.id} tmpl={tmpl} slotValues={slots[tmpl.id]}
               selectedImg={selectedImg} onSlotTap={handleSlotTap}
