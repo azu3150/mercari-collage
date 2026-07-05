@@ -123,22 +123,21 @@ function drawSlot(ctx, sd, slot) {
       const slotRatio = sd.w / sd.h;
       const imgRatio  = iw / ih;
 
-      // cover: fit the shorter dimension to slot, then apply zoom
-      let baseW, baseH;
-      if (imgRatio > slotRatio) {
-        baseH = sd.h; baseW = baseH * imgRatio;
+      // CSS: width=zoom*100%, height=zoom*100%, top=(1-zoom)*50+offsetY %, left=(1-zoom)*50+offsetX %
+      // Image element box:
+      const boxW = sd.w * slot.zoom;
+      const boxH = sd.h * slot.zoom;
+      const boxX = sd.x + sd.w * ((1 - slot.zoom) * 50 + slot.offsetX) / 100;
+      const boxY = sd.y + sd.h * ((1 - slot.zoom) * 50 + slot.offsetY) / 100;
+      const boxRatio = boxW / boxH;
+      let dw, dh;
+      if (imgRatio > boxRatio) {
+        dh = boxH; dw = dh * imgRatio;
       } else {
-        baseW = sd.w; baseH = baseW / imgRatio;
+        dw = boxW; dh = dw / imgRatio;
       }
-      const dw = baseW * slot.zoom;
-      const dh = baseH * slot.zoom;
-
-      // CSS: translate(offsetX%, offsetY%) scale(zoom)
-      // image center = slot center + offsetX/100*slotW, offsetY/100*slotH
-      const cx = sd.x + sd.w/2 + (slot.offsetX/100) * sd.w;
-      const cy = sd.y + sd.h/2 + (slot.offsetY/100) * sd.h;
-      const dx = cx - dw/2;
-      const dy = cy - dh/2;
+      const dx = boxX + (boxW - dw) / 2;
+      const dy = boxY + (boxH - dh) / 2;
 
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
@@ -149,14 +148,14 @@ function drawSlot(ctx, sd, slot) {
   });
 }
 
-function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap, onOpenControls }) {
+function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap, onOpenControls, isAdjusting }) {
   const isSelecting = !!selectedImg;
 
   const handleTap = () => {
     if (isSelecting) {
       onSlotTap(templateId, slotIndex, selectedImg);
     } else if (slot) {
-      onOpenControls({ templateId, slotIndex });
+      onOpenControls({ templateId, slotIndex, slotDef });
     }
   };
 
@@ -169,7 +168,7 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
         width: `${(slotDef.w/S)*100}%`, height: `${(slotDef.h/S)*100}%`,
         background: isSelecting ? "#dbeafe" : slot ? "transparent" : "#f1f5f9",
         border: isSelecting ? "2.5px dashed #3b82f6" : slot ? "2px solid transparent" : "2px dashed #cbd5e1",
-        borderRadius: 3, overflow: "hidden", cursor: "pointer",
+        borderRadius: 3, overflow: "visible", cursor: "pointer",
         boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center",
       }}
@@ -177,11 +176,12 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
       {slot ? (
         <>
           <img src={slot.src} alt="" style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
+            position: "absolute",
+            width: `${slot.zoom * 100}%`,
+            height: `${slot.zoom * 100}%`,
             objectFit: "cover",
-            transformOrigin: "center center",
-            transform: `translate(${slot.offsetX}%, ${slot.offsetY}%) scale(${slot.zoom})`,
+            top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
+            left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
             pointerEvents: "none",
           }} />
           {isSelecting ? (
@@ -206,8 +206,9 @@ function SlotCell({ slotDef, slot, slotIndex, templateId, selectedImg, onSlotTap
   );
 }
 
-function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls, onAdjust, onRemove, onSave }) {
+function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls, controlTarget, onAdjust, onRemove, onSave, onClear }) {
   const allFilled = slotValues.every(s => s !== null);
+  const anyFilled = slotValues.some(s => s !== null);
   return (
     <div style={{ background:"#fff", borderRadius:12, boxShadow:"0 2px 10px #0001",
       padding:10, display:"flex", flexDirection:"column", gap:8,
@@ -215,12 +216,13 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
       <div style={{ fontWeight:700, fontSize:11, color:"#334155", textAlign:"center", lineHeight:1.3 }}>
         {tmpl.label}
       </div>
-      <div style={{ width:"100%", paddingBottom:"100%", position:"relative" }}>
-        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"hidden" }}>
+      <div style={{ width:"100%", paddingBottom:"100%", position:"relative", overflow:"visible" }}>
+        <div style={{ position:"absolute", inset:0, background:"#e2e8f0", borderRadius:6, overflow:"visible" }}>
           {tmpl.slots.map((sd, i) => (
             <SlotCell key={i} slotDef={sd} slot={slotValues[i]} slotIndex={i}
               templateId={tmpl.id} selectedImg={selectedImg}
-              onSlotTap={onSlotTap} onOpenControls={onOpenControls} />
+              onSlotTap={onSlotTap} onOpenControls={onOpenControls}
+              isAdjusting={false} />
           ))}
         </div>
       </div>
@@ -230,8 +232,16 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
           border:"none", borderRadius:7, padding:"7px 0",
           fontWeight:700, fontSize:13,
           cursor: allFilled?"pointer":"not-allowed" }}>
-        📤 保存
+        📤 保存してクリア
       </button>
+      {anyFilled && (
+        <button onClick={() => onClear(tmpl.id)}
+          style={{ background:"#fee2e2", color:"#ef4444",
+            border:"none", borderRadius:7, padding:"5px 0",
+            fontWeight:700, fontSize:12, cursor:"pointer" }}>
+          🗑 一括削除
+        </button>
+      )}
     </div>
   );
 }
@@ -370,16 +380,51 @@ export default function App() {
             background:"#1e1b4b", borderRadius:"18px 18px 0 0",
             padding:"16px 20px 32px", boxShadow:"0 -4px 24px rgba(0,0,0,0.4)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <span style={{ color:"#fff", fontWeight:800, fontSize:15 }}>🎛 画像を調整</span>
               <button onClick={() => setControlTarget(null)}
                 style={{ background:"#6366f1",color:"#fff",border:"none",borderRadius:8,
                   padding:"6px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>✓ 完了</button>
             </div>
+            {(() => {
+              const sd = controlTarget.slotDef;
+              const ratio = sd ? sd.w / sd.h : 1;
+              // Outer: shows the "frame" (what will be cropped)
+              // Inner: image moves freely so user can see the full image and choose crop
+              return (
+                <div style={{ marginBottom:14 }}>
+                  <p style={{ color:"#a5b4fc", fontSize:11, marginBottom:6, textAlign:"center" }}>
+                    枠内が保存される範囲です
+                  </p>
+                  <div style={{ width:"100%", position:"relative",
+                    paddingBottom: `${100/ratio}%`, maxHeight:240 }}>
+                    {/* Full image preview — no clipping */}
+                    <div style={{ position:"absolute", inset:0, overflow:"visible",
+                      display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <div style={{ position:"relative", width:"100%", height:"100%" }}>
+                        <img src={slot.src} alt="" style={{
+                          position:"absolute",
+                          width: `${slot.zoom * 100}%`,
+                          height: `${slot.zoom * 100}%`,
+                          objectFit:"cover",
+                          top: `${(1 - slot.zoom) * 50 + slot.offsetY}%`,
+                          left: `${(1 - slot.zoom) * 50 + slot.offsetX}%`,
+                        }} />
+                        {/* Crop frame overlay */}
+                        <div style={{ position:"absolute", inset:0,
+                          boxShadow:"0 0 0 999px rgba(0,0,0,0.55)",
+                          border:"2px solid #6366f1",
+                          borderRadius:4, pointerEvents:"none", zIndex:2 }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {[
               ["🔍 ズーム","zoom",100,250, v=>parseFloat(v)/100, v=>Math.round(v*100)],
-              ["⬅️➡️ 左右","offsetX",-50,50, v=>parseInt(v), v=>v],
-              ["⬆️⬇️ 上下","offsetY",-50,50, v=>parseInt(v), v=>v],
+              ["⬅️➡️ 左右","offsetX",-100,100, v=>parseInt(v), v=>v],
+              ["⬆️⬇️ 上下","offsetY",-100,100, v=>parseInt(v), v=>v],
             ].map(([label,key,min,max,parse,disp]) => (
               <div key={key} style={{ marginBottom:14 }}>
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
@@ -421,7 +466,7 @@ export default function App() {
           {TEMPLATES.map(tmpl => (
             <TemplateCard key={tmpl.id} tmpl={tmpl} slotValues={slots[tmpl.id]}
               selectedImg={selectedImg} onSlotTap={handleSlotTap}
-              onOpenControls={setControlTarget}
+              onOpenControls={setControlTarget} controlTarget={controlTarget}
               onAdjust={handleAdjust} onRemove={handleRemove} onClear={handleClear}
               onSave={saving ? ()=>{} : handleSave} />
           ))}
