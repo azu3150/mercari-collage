@@ -756,6 +756,9 @@ export default function App() {
           <li>全スロットが埋まったら「💾 保存」でJPGをダウンロード</li>
         </ol>
       </div>
+      </>}
+      {activeTab === "title" && <TitleGenerator />}
     </div>
   );
 }
+
