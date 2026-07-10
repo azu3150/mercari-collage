@@ -251,175 +251,6 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
   );
 }
 
-
-const SYSTEM_PROMPT = `あなたはメルカリ出品のプロです。以下のルールを厳守してください。
-
-【タイトルのルール】
-・コーチ（Coach）の商品のみ英語タイトルも出力。それ以外のブランドは日本語タイトルのみ（日本語タイトル内のブランド名のラテン文字表記は可）。
-・タイトルは必ず40文字をフル活用する。「40文字以内」ではなく、40文字を使い切ること。
-・スペース区切り・左詰めでSEOを意識する。スラッシュ（／）区切りは使わない。
-・重要なキーワードほど左に置く。
-
-【キーワード（説明文用）のルール】
-毎回、タイトルとセットで説明文用キーワードを出力する。以下を必ず網羅する：
-ブランド名（日本語＋英語）／アイテム種別／素材／色／金具・ハードウェア／スタイル・デザイン詳細／状態を表す語／年代（該当すればY2K・ヴィンテージ・90sなど）／性別（該当すれば）。日本語と英語を混ぜて検索の網を最大化する。
-
-【絶対に間違えてはいけない区別】
-・Coach Signature ＝ 小さなインターロッキングCのモノグラム柄（小さなCが並ぶ柄）。サテン素材で大きなCが並ぶバッグもSignatureと呼ぶ。
-・Coach Op Art ＝ 大きく大胆な、幾何学的に重なり合うCの円柄。
-この2つは絶対に混同しない。
-
-【その他のルール】
-・ヴィンテージ品・希少品には「希少」「旧タグ」などの希少性ワードをキーワードに入れる。
-・型番がわかる高級ブランド品は、型番を入れてSEOと購入者の信頼を高める。
-
-【サイズテンプレート】
-必ず以下のフォーマットで出力（数値は画像から推測、不明な項目は〇〇のまま）：
-縦 約  〇〇cm
-横 約  〇〇cm
-マチ 約  〇〇cm
-ハンドル 約  〇〇cm
-ショルダー 約  〇〇cm
-
-【出力フォーマット】
-以下の順番でプレーンテキストのみで出力。マークダウン装飾なし。
-
-メルカリタイトル（日本語40字）
-（ここに40文字タイトル）
-
-メルカリタイトル（英語40字）※Coachのみ
-（ここに英語タイトル、Coach以外は「対象外」と出力）
-
-メルカリタイトル（日本語65字）
-（ここに65文字タイトル）
-
-サイズ
-縦 約  〇〇cm
-横 約  〇〇cm
-マチ 約  〇〇cm
-ハンドル 約  〇〇cm
-ショルダー 約  〇〇cm
-
-説明文キーワード
-（キーワード一覧）`;
-
-function TitleGenerator() {
-  const [modelNo, setModelNo] = useState("");
-  const [image, setImage] = useState(null); // {base64, mimeType}
-  const [result, setResult] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const fileRef = useRef();
-
-  const handleImage = (file) => {
-    if (!file || !file.type.startsWith("image/")) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      const base64 = e.target.result.split(",")[1];
-      setImage({ base64, mimeType: file.type });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleGenerate = async () => {
-    if (!image) { alert("商品画像をアップロードしてください"); return; }
-    setLoading(true);
-    setResult("");
-    try {
-      const userText = modelNo ? `商品画像です。型番: ${modelNo}` : "商品画像です。型番は不明です。";
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-6",
-          max_tokens: 1000,
-          system: SYSTEM_PROMPT,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "image", source: { type: "base64", media_type: image.mimeType, data: image.base64 } },
-              { type: "text", text: userText }
-            ]
-          }]
-        })
-      });
-      const data = await response.json();
-      setResult(data.content?.[0]?.text || "エラーが発生しました");
-    } catch(e) {
-      setResult("エラー: " + e.message);
-    }
-    setLoading(false);
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div style={{ padding:"16px 14px 40px" }}>
-      {/* Image upload */}
-      <div style={{ marginBottom:14 }}>
-        <div style={{ fontWeight:700, fontSize:13, color:"#475569", marginBottom:8 }}>📷 商品画像</div>
-        <div onClick={() => fileRef.current.click()}
-          style={{ border:"2.5px dashed #a5b4fc", borderRadius:12, background:"#fff",
-            padding:image ? 8 : "24px 16px", textAlign:"center", cursor:"pointer" }}>
-          {image ? (
-            <img src={`data:${image.mimeType};base64,${image.base64}`} alt=""
-              style={{ maxWidth:"100%", maxHeight:240, borderRadius:8, display:"block", margin:"0 auto" }} />
-          ) : (
-            <>
-              <div style={{ fontSize:32 }}>📁</div>
-              <div style={{ color:"#6366f1", fontWeight:700, marginTop:6 }}>タップして商品画像を追加</div>
-            </>
-          )}
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }}
-          onChange={e => handleImage(e.target.files[0])} />
-      </div>
-
-      {/* Model number */}
-      <div style={{ marginBottom:16 }}>
-        <div style={{ fontWeight:700, fontSize:13, color:"#475569", marginBottom:8 }}>🔢 型番（わからない場合は空欄でOK）</div>
-        <input value={modelNo} onChange={e => setModelNo(e.target.value)}
-          placeholder="例: F15641、9988 など"
-          style={{ width:"100%", padding:"10px 12px", borderRadius:8,
-            border:"1.5px solid #cbd5e1", fontSize:14, boxSizing:"border-box" }} />
-      </div>
-
-      {/* Generate button */}
-      <button onClick={handleGenerate} disabled={loading || !image}
-        style={{ width:"100%", background: loading||!image ? "#e2e8f0" : "linear-gradient(90deg,#6366f1,#8b5cf6)",
-          color: loading||!image ? "#94a3b8" : "#fff",
-          border:"none", borderRadius:10, padding:"14px",
-          fontWeight:800, fontSize:15, cursor: loading||!image ? "not-allowed" : "pointer", marginBottom:16 }}>
-        {loading ? "✨ 生成中..." : "✨ タイトルを生成する"}
-      </button>
-
-      {/* Result */}
-      {result && (
-        <div>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-            <div style={{ fontWeight:700, fontSize:13, color:"#475569" }}>📋 生成結果</div>
-            <button onClick={handleCopy}
-              style={{ background: copied ? "#10b981" : "#6366f1", color:"#fff",
-                border:"none", borderRadius:7, padding:"6px 14px",
-                fontWeight:700, fontSize:12, cursor:"pointer" }}>
-              {copied ? "✓ コピー済み" : "📋 全部コピー"}
-            </button>
-          </div>
-          <div style={{ background:"#fff", border:"1.5px solid #e2e8f0", borderRadius:10,
-            padding:"14px", fontSize:13, lineHeight:1.8, whiteSpace:"pre-wrap",
-            fontFamily:"monospace", color:"#1e293b" }}>
-            {result}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function App() {
   const [images, setImages] = useState([]);
   const [slots, setSlots] = useState(() => {
@@ -432,7 +263,6 @@ export default function App() {
   const [previewDataUrl, setPreviewDataUrl] = useState(null);
   const [controlTarget, setControlTarget] = useState(null); // {templateId, slotIndex}
   const [currentTmplIndex, setCurrentTmplIndex] = useState(0);
-  const [activeTab, setActiveTab] = useState("collage"); // "collage" | "title"
   const fileInputRef = useRef();
   const hiddenCanvas = useRef();
 
@@ -521,20 +351,9 @@ export default function App() {
       <canvas ref={hiddenCanvas} style={{ display:"none" }} />
 
       {/* Header */}
-      <div style={{ background:"linear-gradient(90deg,#6366f1,#8b5cf6)", padding:"14px 20px 0", color:"#fff" }}>
-        <div style={{ fontWeight:800, fontSize:18 }}>📦 メルカリ出品サポート</div>
-        <div style={{ display:"flex", marginTop:12 }}>
-          {[["collage","🖼 分割画像"],["title","✍️ タイトル生成"]].map(([tab,label]) => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              style={{ flex:1, padding:"8px 0", border:"none", cursor:"pointer", fontSize:13, fontWeight:700,
-                background: activeTab===tab ? "#fff" : "transparent",
-                color: activeTab===tab ? "#6366f1" : "rgba(255,255,255,0.75)",
-                borderRadius: activeTab===tab ? "8px 8px 0 0" : "0",
-                transition:"all 0.15s" }}>
-              {label}
-            </button>
-          ))}
-        </div>
+      <div style={{ background:"linear-gradient(90deg,#6366f1,#8b5cf6)", padding:"14px 20px", color:"#fff" }}>
+        <div style={{ fontWeight:800, fontSize:18 }}>📦 メルカリ 分割画像メーカー</div>
+        <div style={{ fontSize:12, opacity:0.85, marginTop:2 }}>写真をタップ選択 → スロットをタップで配置</div>
       </div>
 
       {/* Save preview modal */}
@@ -637,7 +456,6 @@ export default function App() {
         );
       })()}
 
-      {activeTab === "collage" && <>
       {/* Selected banner */}
       {selectedImg && (
         <div style={{ background:"#2563eb", color:"#fff", padding:"8px 14px",
@@ -756,9 +574,6 @@ export default function App() {
           <li>全スロットが埋まったら「💾 保存」でJPGをダウンロード</li>
         </ol>
       </div>
-      </>}
-      {activeTab === "title" && <TitleGenerator />}
     </div>
   );
 }
-
