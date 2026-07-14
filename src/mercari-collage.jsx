@@ -251,6 +251,7 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
   );
 }
 
+
 export default function App() {
   const [images, setImages] = useState([]);
   const [slots, setSlots] = useState(() => {
@@ -384,32 +385,96 @@ export default function App() {
         return (
           <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:500,
             background:"#1e1b4b", borderRadius:"18px 18px 0 0",
-            padding:"16px 20px 32px", boxShadow:"0 -4px 24px rgba(0,0,0,0.4)" }}
+            boxShadow:"0 -4px 24px rgba(0,0,0,0.4)",
+            display:"flex", flexDirection:"column", maxHeight:"90vh" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            {/* Fixed header — always visible */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+              padding:"16px 20px 12px", flexShrink:0 }}>
               <span style={{ color:"#fff", fontWeight:800, fontSize:15 }}>🎛 画像を調整</span>
               <button onClick={() => setControlTarget(null)}
                 style={{ background:"#6366f1",color:"#fff",border:"none",borderRadius:8,
                   padding:"6px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>✓ 完了</button>
             </div>
+            {/* Scrollable content */}
+            <div style={{ overflowY:"auto", padding:"0 20px 32px", flexGrow:1 }}>
             {(() => {
               const sd = controlTarget.slotDef;
               const slotRatio = sd ? sd.w / sd.h : 1;
-              // Preview: image shown freely (no clipping), crop frame overlaid as border
-              // Frame fills the preview area at slot aspect ratio
               const frameW = slotRatio >= 1 ? 100 : slotRatio * 100;
               const frameH = slotRatio >= 1 ? (100 / slotRatio) : 100;
               const frameLeft = (100 - frameW) / 2;
               const frameTop = (100 - frameH) / 2;
+
+              // Touch handlers: plain mutable object (no hook needed)
+              const touchRef = { current: { lastDist:null, lastX:null, lastY:null, curX: slot.offsetX, curY: slot.offsetY, curZoom: slot.zoom } };
+
+              const getDistance = (t1, t2) => {
+                const dx = t1.clientX - t2.clientX;
+                const dy = t1.clientY - t2.clientY;
+                return Math.sqrt(dx*dx + dy*dy);
+              };
+
+              const onTouchStart = (e) => {
+                e.preventDefault();
+                if (e.touches.length === 2) {
+                  touchRef.current.lastDist = getDistance(e.touches[0], e.touches[1]);
+                } else if (e.touches.length === 1) {
+                  touchRef.current.lastX = e.touches[0].clientX;
+                  touchRef.current.lastY = e.touches[0].clientY;
+                }
+              };
+
+              const onTouchMove = (e) => {
+                e.preventDefault();
+                const t = touchRef.current;
+                if (e.touches.length === 2) {
+                  const dist = getDistance(e.touches[0], e.touches[1]);
+                  if (t.lastDist) {
+                    const scale = dist / t.lastDist;
+                    t.curZoom = Math.min(2.5, Math.max(1, t.curZoom * scale));
+                    handleAdjust(templateId, slotIndex, "zoom", t.curZoom);
+                  }
+                  t.lastDist = dist;
+                } else if (e.touches.length === 1) {
+                  const dx = e.touches[0].clientX - (t.lastX ?? e.touches[0].clientX);
+                  const dy = e.touches[0].clientY - (t.lastY ?? e.touches[0].clientY);
+                  const el = e.currentTarget;
+                  const previewW = el.offsetWidth || 300;
+                  const previewH = el.offsetHeight || 280;
+                  t.curX = Math.min(100, Math.max(-100, t.curX + (dx / previewW) * 200));
+                  t.curY = Math.min(100, Math.max(-100, t.curY + (dy / previewH) * 200));
+                  // Update image directly via DOM for smoothness
+                  const img = el.querySelector("img");
+                  if (img) {
+                    img.style.left = `${frameLeft + (1 - t.curZoom) * frameW / 2 + t.curX * frameW / 100}%`;
+                    img.style.top  = `${frameTop  + (1 - t.curZoom) * frameH / 2 + t.curY * frameH / 100}%`;
+                  }
+                  t.lastX = e.touches[0].clientX;
+                  t.lastY = e.touches[0].clientY;
+                }
+              };
+
+              const onTouchEnd = (e) => {
+                const t = touchRef.current;
+                // Commit position to state
+                handleAdjust(templateId, slotIndex, "offsetX", t.curX);
+                handleAdjust(templateId, slotIndex, "offsetY", t.curY);
+                t.lastDist = null; t.lastX = null; t.lastY = null;
+              };
+
               return (
                 <div style={{ marginBottom:14 }}>
                   <p style={{ color:"#a5b4fc", fontSize:11, marginBottom:6, textAlign:"center" }}>
-                    紫の枠内が保存される範囲 — スライダーで位置を合わせてください
+                    👆 1本指でドラッグ・2本指でズーム
                   </p>
-                  {/* Outer: fixed height container, NO overflow hidden */}
-                  <div style={{ width:"100%", height:280, background:"#111",
-                    borderRadius:10, position:"relative", overflow:"visible" }}>
-                    {/* Image: full size, freely movable, no clipping */}
+                  <div
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
+                    style={{ width:"100%", height:280, background:"#111",
+                      borderRadius:10, position:"relative", overflow:"visible",
+                      touchAction:"none" }}>
                     <img src={slot.src} alt="" style={{
                       position:"absolute",
                       width: `${slot.zoom * frameW}%`,
@@ -418,8 +483,8 @@ export default function App() {
                       top: `${frameTop + (1 - slot.zoom) * frameH / 2 + slot.offsetY * frameH / 100}%`,
                       left: `${frameLeft + (1 - slot.zoom) * frameW / 2 + slot.offsetX * frameW / 100}%`,
                       maxWidth:"none",
+                      pointerEvents:"none",
                     }} />
-                    {/* Crop frame overlay — just the border, no clipping */}
                     <div style={{
                       position:"absolute",
                       left:`${frameLeft}%`, top:`${frameTop}%`,
@@ -452,6 +517,7 @@ export default function App() {
                 borderRadius:8,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer",marginTop:4 }}>
               🗑 この画像を削除
             </button>
+            </div>{/* end scrollable */}
           </div>
         );
       })()}
@@ -574,6 +640,7 @@ export default function App() {
           <li>全スロットが埋まったら「💾 保存」でJPGをダウンロード</li>
         </ol>
       </div>
+
     </div>
   );
 }
