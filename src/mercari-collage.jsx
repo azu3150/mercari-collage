@@ -237,7 +237,7 @@ function TemplateCard({ tmpl, slotValues, selectedImg, onSlotTap, onOpenControls
           border:"none", borderRadius:7, padding:"7px 0",
           fontWeight:700, fontSize:13,
           cursor: allFilled?"pointer":"not-allowed" }}>
-        📤 保存してクリア
+        📤 保存
       </button>
       {anyFilled && (
         <button onClick={() => onClear(tmpl.id)}
@@ -333,13 +333,7 @@ export default function App() {
       out.getContext("2d").drawImage(canvas, 0, 0, 800, 800);
       const dataUrl = out.toDataURL("image/jpeg", 0.88);
       setPreviewDataUrl(dataUrl);
-      // Auto-clear template after save
-      setSlots(prev => {
-        const next = { ...prev };
-        next[tmpl.id] = Array(next[tmpl.id].length).fill(null);
-        return next;
-      });
-      setControlTarget(null);
+
     } catch(e) {
       alert("エラー: " + e.message);
     }
@@ -575,9 +569,18 @@ export default function App() {
 
       {/* Tray */}
       <div style={{ padding:"6px 14px 20px" }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontWeight:700, fontSize:13, color:"#475569", marginBottom:8 }}>
-          📷 写真トレイ
-          <span style={{ fontWeight:400, color:"#94a3b8", marginLeft:8, fontSize:12 }}>{images.length}/20枚</span>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+          <div style={{ fontWeight:700, fontSize:13, color:"#475569" }}>
+            📷 写真トレイ
+            <span style={{ fontWeight:400, color:"#94a3b8", marginLeft:8, fontSize:12 }}>{images.length}/20枚</span>
+          </div>
+          {images.length > 0 && (
+            <button onClick={() => setImages([])}
+              style={{ background:"#fee2e2", color:"#ef4444", border:"none",
+                borderRadius:7, padding:"5px 12px", fontWeight:700, fontSize:12, cursor:"pointer" }}>
+              🗑 全削除
+            </button>
+          )}
         </div>
         <button onClick={() => fileInputRef.current.click()}
           style={{ width:"100%", marginBottom:10, background:"#ede9fe",
